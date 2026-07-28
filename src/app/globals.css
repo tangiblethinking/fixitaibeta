@@ -1,0 +1,24 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-surface text-ink-900 antialiased;
+  }
+
+  /* Smooth touch scrolling on mobile */
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+@layer components {
+  .page-container {
+    @apply min-h-screen flex flex-col px-5 py-6 max-w-lg mx-auto;
+  }
+
+  .page-center {
+    @apply min-h-screen flex flex-col items-center justify-center px-5 py-6 max-w-lg mx-auto;
+  }
+}
