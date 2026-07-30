@@ -27,8 +27,25 @@ export default function WorkspaceScreen({ userId }: WorkspaceScreenProps) {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
+  const getStoredApiKey = (): string | null => {
+    if (typeof window === 'undefined') return null;
+
+    const localKey =
+      localStorage.getItem('gemini_api_key') ||
+      localStorage.getItem('fixit_api_key');
+
+    if (localKey) return localKey;
+
+    const cookieMatch = document.cookie.match(/(?:^|; )gemini_api_key=([^;]*)/);
+    if (cookieMatch) return decodeURIComponent(cookieMatch[1]);
+
+    const fixitCookieMatch = document.cookie.match(/(?:^|; )fixit_api_key=([^;]*)/);
+    if (fixitCookieMatch) return decodeURIComponent(fixitCookieMatch[1]);
+
+    return null;
+  };
+
   const handleSubmitDiagnosis = async (file: File, type: 'image' | 'video') => {
-    // Add user message
     const userMessage: ChatMessageType = {
       id: Date.now().toString(),
       role: 'user',
@@ -45,20 +62,37 @@ export default function WorkspaceScreen({ userId }: WorkspaceScreenProps) {
     setProcessing(true);
     scrollToBottom();
 
+    const apiKey = getStoredApiKey();
+
+    if (!apiKey) {
+      const errorMessage: ChatMessageType = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: 'No API key found. Please set up your key in Settings.',
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+      setProcessing(false);
+      scrollToBottom();
+      return;
+    }
+
     try {
       const formData = new FormData();
       formData.append('userId', userId);
       formData.append('message', 'Diagnose this home repair issue.');
+      formData.append('apiKey', apiKey);
 
       if (type === 'image') {
         formData.append('image', file);
       }
-      // Video would go through File API first (future enhancement)
-      // For now, send as image if it's a video frame
 
       if (type === 'image') {
         const res = await fetch('/api/diagnose', {
           method: 'POST',
+          headers: {
+            'x-api-key': apiKey,
+          },
           body: formData,
         });
 
@@ -116,8 +150,6 @@ export default function WorkspaceScreen({ userId }: WorkspaceScreenProps) {
       return;
     }
 
-    // For MVP, extract a frame from video and send as image
-    // Full video pipeline via File API comes in Phase 4
     handleSubmitDiagnosis(file, 'video');
     e.target.value = '';
   };
