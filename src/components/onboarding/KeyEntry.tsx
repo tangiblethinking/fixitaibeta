@@ -3,11 +3,13 @@
 import React, { useState } from 'react';
 
 interface KeyEntryProps {
-  onSuccess?: (key: string) => void;
+  robotName?: string;
+  userId?: string;
+  onSuccess?: (key?: string) => void;
   onBack?: () => void;
 }
 
-export default function KeyEntry({ onSuccess, onBack }: KeyEntryProps) {
+export default function KeyEntry({ robotName, userId, onSuccess, onBack }: KeyEntryProps) {
   const [apiKey, setApiKey] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -30,7 +32,7 @@ export default function KeyEntry({ onSuccess, onBack }: KeyEntryProps) {
       const res = await fetch('/api/verify-key', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ apiKey: cleanKey }),
+        body: JSON.stringify({ apiKey: cleanKey, userId }),
       });
 
       const data = await res.json();
@@ -41,7 +43,7 @@ export default function KeyEntry({ onSuccess, onBack }: KeyEntryProps) {
         return;
       }
 
-      // Save key locally across browser sessions and cookies for server/client access
+      // Save key locally across browser sessions and cookies
       localStorage.setItem('gemini_api_key', cleanKey);
       localStorage.setItem('fixit_api_key', cleanKey);
       document.cookie = `gemini_api_key=${cleanKey}; path=/; max-age=31536000; SameSite=Lax`;
