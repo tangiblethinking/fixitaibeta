@@ -1,153 +1,84 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { Wrench, Camera, Zap, Shield } from 'lucide-react';
+import { Button } from '@/components/ui';
+import DiagnosticCard from '@/components/diagnostic/DiagnosticCard';
+import { DEMO_DIAGNOSIS } from '@/lib/demo-data';
 
-interface Message {
-  id: string;
-  role: 'user' | 'assistant';
-  content: string;
-}
-
-export default function Home() {
-  const [apiKey, setApiKey] = useState<string | null>(null);
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [isDiagnosing, setIsDiagnosing] = useState(false);
-
-  // Hydrate key on client mount and when storage event fires
-  useEffect(() => {
-    const fetchStoredKey = () => {
-      const storedKey =
-        localStorage.getItem('gemini_api_key') ||
-        localStorage.getItem('fixit_api_key');
-      if (storedKey) {
-        setApiKey(storedKey);
-      }
-    };
-
-    fetchStoredKey();
-    window.addEventListener('storage', fetchStoredKey);
-    return () => window.removeEventListener('storage', fetchStoredKey);
-  }, []);
-
-  const handleDiagnose = async () => {
-    // Check state first, or fallback directly to localStorage lookup
-    const activeKey =
-      apiKey ||
-      localStorage.getItem('gemini_api_key') ||
-      localStorage.getItem('fixit_api_key');
-
-    if (!activeKey) {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: String(Date.now()),
-          role: 'assistant',
-          content: 'No API key found. Please set up your key in Settings.',
-        },
-      ]);
-      return;
-    }
-
-    setIsDiagnosing(true);
-
-    try {
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': activeKey,
-        },
-        body: JSON.stringify({
-          apiKey: activeKey,
-          message: 'Diagnose this issue.',
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: String(Date.now()),
-            role: 'assistant',
-            content: data.error || 'Failed to complete diagnosis.',
-          },
-        ]);
-        return;
-      }
-
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: String(Date.now()),
-          role: 'assistant',
-          content: data.result || 'Diagnosis complete.',
-        },
-      ]);
-    } catch (err) {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: String(Date.now()),
-          role: 'assistant',
-          content: 'Network error processing diagnosis. Please try again.',
-        },
-      ]);
-    } finally {
-      setIsDiagnosing(false);
-    }
-  };
+export default function LandingPage() {
+  const router = useRouter();
 
   return (
-    <main className="min-h-screen bg-[#FFFDF9] text-slate-900 flex flex-col justify-between p-6">
+    <div className="min-h-screen bg-surface">
       {/* Header */}
-      <header className="flex justify-between items-center w-full max-w-7xl mx-auto">
-        <h1 className="text-xl font-bold tracking-tight">FixIt AI</h1>
-        <Link
-          href="/onboarding"
-          className="p-2 text-slate-500 hover:text-slate-800 transition-colors"
-          title="Settings / Key Entry"
+      <header className="flex items-center justify-between px-5 py-4 max-w-lg mx-auto">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-brand-500 flex items-center justify-center">
+            <Wrench className="w-4 h-4 text-white" strokeWidth={2.5} />
+          </div>
+          <span className="text-title text-ink-900">FixIt AI</span>
+        </div>
+        <button
+          onClick={() => router.push('/auth/login')}
+          className="text-body-sm text-brand-600 font-medium hover:text-brand-700 min-h-[44px] flex items-center"
         >
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-          </svg>
-        </Link>
+          Sign in
+        </button>
       </header>
 
-      {/* Main Content Area */}
-      <div className="flex-1 flex flex-col justify-between max-w-7xl w-full mx-auto my-8">
-        {/* Messages Log */}
-        <div className="space-y-4 mb-6">
-          {messages.map((msg) => (
-            <p key={msg.id} className="text-slate-700 text-sm leading-relaxed">
-              {msg.content}
-            </p>
+      {/* Hero */}
+      <main className="px-5 max-w-lg mx-auto pb-12">
+        <div className="text-center mt-8 mb-8">
+          <h1 className="text-display font-display text-ink-900 mb-3">
+            Snap a photo.
+            <br />
+            Get a repair plan.
+          </h1>
+          <p className="text-body text-ink-500 max-w-sm mx-auto">
+            AI-powered home repair diagnostics. Know what&apos;s wrong, what you
+            need, and whether to DIY or call a pro.
+          </p>
+        </div>
+
+        {/* Demo Diagnosis */}
+        <div className="mb-8">
+          <p className="text-caption text-ink-400 uppercase tracking-wider mb-3 text-center">
+            Example diagnosis
+          </p>
+          <DiagnosticCard diagnosis={DEMO_DIAGNOSIS} />
+        </div>
+
+        {/* Value Props */}
+        <div className="grid grid-cols-3 gap-3 mb-8">
+          {[
+            { icon: Camera, label: 'Photo or video' },
+            { icon: Zap, label: 'Instant diagnosis' },
+            { icon: Shield, label: 'Free to use' },
+          ].map(({ icon: Icon, label }) => (
+            <div
+              key={label}
+              className="flex flex-col items-center gap-1.5 py-3"
+            >
+              <Icon className="w-5 h-5 text-brand-500" />
+              <span className="text-caption text-ink-600">{label}</span>
+            </div>
           ))}
         </div>
 
-        {/* Action Card */}
-        <div className="flex justify-end">
-          <div className="bg-orange-500 rounded-2xl p-2 w-full max-w-xs shadow-md">
-            <div className="relative rounded-xl overflow-hidden aspect-video bg-slate-200">
-              <img
-                src="https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=600&q=80"
-                alt="Drywall Damage"
-                className="w-full h-full object-cover"
-              />
-            </div>
-            <button
-              onClick={handleDiagnose}
-              disabled={isDiagnosing}
-              className="w-full text-left text-white font-medium text-sm py-2 px-1 mt-1 hover:opacity-90 disabled:opacity-50 transition-opacity"
-            >
-              {isDiagnosing ? 'Diagnosing issue...' : 'Diagnose this issue'}
-            </button>
-          </div>
+        {/* CTA */}
+        <div className="space-y-3">
+          <Button
+            size="lg"
+            onClick={() => router.push('/auth/login')}
+          >
+            Get started
+          </Button>
+          <p className="text-center text-caption text-ink-400">
+            *Google/Gmail account required. Set up in a few quick steps.
+          </p>
         </div>
-      </div>
-    </main>
+      </main>
+    </div>
   );
 }
