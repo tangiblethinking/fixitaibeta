@@ -12,21 +12,27 @@ export async function POST(request: Request) {
       );
     }
 
-    // Initialize Google AI with the user's key
-    const genAI = new GoogleGenerativeAI(apiKey.trim());
+    const cleanKey = apiKey.trim();
+    const genAI = new GoogleGenerativeAI(cleanKey);
 
-    // Use gemini-1.5-flash for a lightweight validation check
+    // Use gemini-1.5-flash with a minimal generateContent call to safely test access
     const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-
-    // Count tokens on a short string to test the key without consuming heavy generation quota
-    await model.countTokens('validation_test');
+    
+    // Simple verification request
+    await model.generateContent({
+      contents: [{ role: 'user', parts: [{ text: 'ping' }] }],
+      generationConfig: { maxOutputTokens: 1 },
+    });
 
     return NextResponse.json({ success: true });
   } catch (error: any) {
+    // Log actual server error to Vercel logs so you can inspect it if needed
+    console.error('API Key Verification Error:', error);
+
     const errorMessage = error?.message || error?.toString() || '';
     const statusCode = error?.status || error?.statusCode;
 
-    // Check specifically for rate limit / quota exhaustion (HTTP 429 or RESOURCE_EXHAUSTED)
+    // Quota exhaustion check
     if (statusCode === 429 || errorMessage.includes('RESOURCE_EXHAUSTED')) {
       return NextResponse.json(
         { error: 'Rate limit hit — your free tier quota may be exhausted. Try again after midnight PT.' },
@@ -34,7 +40,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // Check for invalid API key credential errors (HTTP 400/401/403 or API_KEY_INVALID)
+    // Invalid key check
     if (
       statusCode === 400 ||
       statusCode === 401 ||
@@ -48,9 +54,9 @@ export async function POST(request: Request) {
       );
     }
 
-    // Fallback for unexpected errors (e.g., network issues)
+    // Return the actual error message sent by Google or runtime instead of masking it
     return NextResponse.json(
-      { error: 'Unable to verify key. Please double-check your connection and key format.' },
+      { error: `Verification error: ${errorMessage || 'Unknown error occurred.'}` },
       { status: 500 }
     );
   }
