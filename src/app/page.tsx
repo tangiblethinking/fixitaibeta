@@ -10,13 +10,18 @@ export default function LandingPage() {
   const router = useRouter();
 
   const handleStartDiagnosis = () => {
-    // Check if key exists in client storage before routing/diagnosing
-    const hasKey = typeof window !== 'undefined' && (
+    // Check if key exists in client localStorage or cookies before routing
+    const hasLocalStorageKey = typeof window !== 'undefined' && (
       localStorage.getItem('gemini_api_key') ||
       localStorage.getItem('fixit_api_key')
     );
 
-    if (!hasKey) {
+    const hasCookieKey = typeof document !== 'undefined' && (
+      document.cookie.includes('gemini_api_key=') ||
+      document.cookie.includes('fixit_api_key=')
+    );
+
+    if (!hasLocalStorageKey && !hasCookieKey) {
       router.push('/onboarding');
       return;
     }
