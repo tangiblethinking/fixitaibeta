@@ -43,19 +43,19 @@ export default function KeyEntry({ robotName, userId, onSuccess, onBack }: KeyEn
         return;
       }
 
-      // Save key locally across browser sessions and cookies
+      // Persist key locally across sessions
       localStorage.setItem('gemini_api_key', cleanKey);
       localStorage.setItem('fixit_api_key', cleanKey);
       document.cookie = `gemini_api_key=${cleanKey}; path=/; max-age=31536000; SameSite=Lax`;
 
-      // Notify window listeners so state updates instantly across components
+      // Notify window listeners so app state updates immediately
       window.dispatchEvent(new Event('storage'));
 
       if (onSuccess) {
         onSuccess(cleanKey);
       }
     } catch (err: any) {
-      setError('Network error verifying API key. Please check your connection and try again.');
+      setError('Network error verifying API key. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -75,18 +75,8 @@ export default function KeyEntry({ robotName, userId, onSuccess, onBack }: KeyEn
 
       <div className="flex justify-center mb-4">
         <div className="w-16 h-16 bg-orange-100 rounded-2xl flex items-center justify-center">
-          <svg
-            className="w-8 h-8 text-orange-600"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
-            />
+          <svg className="w-8 h-8 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
           </svg>
         </div>
       </div>
@@ -109,9 +99,7 @@ export default function KeyEntry({ robotName, userId, onSuccess, onBack }: KeyEn
             }}
             placeholder="AIzaSy..."
             className={`w-full px-4 py-3 pr-12 rounded-xl border text-slate-900 bg-slate-50 focus:bg-white focus:outline-none transition-colors ${
-              error
-                ? 'border-red-500 focus:border-red-500 bg-red-50/30'
-                : 'border-slate-200 focus:border-orange-500'
+              error ? 'border-red-500 focus:border-red-500 bg-red-50/30' : 'border-slate-200 focus:border-orange-500'
             }`}
             disabled={isLoading}
           />
@@ -134,11 +122,7 @@ export default function KeyEntry({ robotName, userId, onSuccess, onBack }: KeyEn
           </button>
         </div>
 
-        {error && (
-          <p className="text-sm text-red-600 leading-relaxed font-medium">
-            {error}
-          </p>
-        )}
+        {error && <p className="text-sm text-red-600 font-medium">{error}</p>}
 
         <button
           type="submit"
@@ -149,9 +133,8 @@ export default function KeyEntry({ robotName, userId, onSuccess, onBack }: KeyEn
         </button>
       </form>
 
-      <p className="text-xs text-center text-slate-400 mt-6 leading-relaxed">
-        Your key is encrypted with AES-256-GCM and stored server-side.
-        It's never visible in your browser again.
+      <p className="text-xs text-center text-slate-400 mt-6">
+        Your key is stored locally in your browser to power diagnostic tools.
       </p>
     </div>
   );
