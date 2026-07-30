@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import { GoogleGenerativeAI } from '@google/generative-ai';
 
 export async function POST(request: Request) {
   try {
@@ -14,8 +13,7 @@ export async function POST(request: Request) {
 
     const cleanKey = apiKey.trim();
 
-    // Verify key directly against Google AI Studio via a lightweight REST request.
-    // This bypasses SDK model-naming discrepancies completely.
+    // Verify key against Google AI Studio models endpoint without spending generation quota
     const googleRes = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models?key=${cleanKey}`,
       { method: 'GET' }
@@ -47,10 +45,8 @@ export async function POST(request: Request) {
       );
     }
 
-    // Key is valid and can query Google models
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, apiKey: cleanKey });
   } catch (error: any) {
-    console.error('API Key Verification Error:', error);
     return NextResponse.json(
       { error: `Verification error: ${error?.message || 'Network error occurred.'}` },
       { status: 500 }
