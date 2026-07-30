@@ -13,50 +13,46 @@ export async function POST(request: Request) {
     }
 
     const cleanKey = apiKey.trim();
-    const genAI = new GoogleGenerativeAI(cleanKey);
 
-    // Use gemini-1.5-flash with a minimal generateContent call to safely test access
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-    
-    // Simple verification request
-    await model.generateContent({
-      contents: [{ role: 'user', parts: [{ text: 'ping' }] }],
-      generationConfig: { maxOutputTokens: 1 },
-    });
+    // Verify key directly against Google AI Studio via a lightweight REST request.
+    // This bypasses SDK model-naming discrepancies completely.
+    const googleRes = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models?key=${cleanKey}`,
+      { method: 'GET' }
+    );
 
+    const data = await googleRes.json();
+
+    if (!googleRes.ok) {
+      const errorMsg = data?.error?.message || '';
+      const status = googleRes.status;
+
+      if (status === 429 || errorMsg.includes('RESOURCE_EXHAUSTED')) {
+        return NextResponse.json(
+          { error: 'Rate limit hit — your free tier quota may be exhausted. Try again after midnight PT.' },
+          { status: 429 }
+        );
+      }
+
+      if (status === 400 || status === 401 || status === 403 || errorMsg.includes('API_KEY_INVALID')) {
+        return NextResponse.json(
+          { error: 'Invalid API key. Please check the key you copied from Google AI Studio.' },
+          { status: 400 }
+        );
+      }
+
+      return NextResponse.json(
+        { error: `Google API Error: ${errorMsg || 'Failed to authenticate key.'}` },
+        { status: status }
+      );
+    }
+
+    // Key is valid and can query Google models
     return NextResponse.json({ success: true });
   } catch (error: any) {
-    // Log actual server error to Vercel logs so you can inspect it if needed
     console.error('API Key Verification Error:', error);
-
-    const errorMessage = error?.message || error?.toString() || '';
-    const statusCode = error?.status || error?.statusCode;
-
-    // Quota exhaustion check
-    if (statusCode === 429 || errorMessage.includes('RESOURCE_EXHAUSTED')) {
-      return NextResponse.json(
-        { error: 'Rate limit hit — your free tier quota may be exhausted. Try again after midnight PT.' },
-        { status: 429 }
-      );
-    }
-
-    // Invalid key check
-    if (
-      statusCode === 400 ||
-      statusCode === 401 ||
-      statusCode === 403 ||
-      errorMessage.includes('API_KEY_INVALID') ||
-      errorMessage.includes('API key not valid')
-    ) {
-      return NextResponse.json(
-        { error: 'Invalid API key. Please check the key you copied from Google AI Studio.' },
-        { status: 400 }
-      );
-    }
-
-    // Return the actual error message sent by Google or runtime instead of masking it
     return NextResponse.json(
-      { error: `Verification error: ${errorMessage || 'Unknown error occurred.'}` },
+      { error: `Verification error: ${error?.message || 'Network error occurred.'}` },
       { status: 500 }
     );
   }
