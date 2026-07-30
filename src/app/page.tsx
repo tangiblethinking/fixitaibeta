@@ -9,6 +9,21 @@ import { DEMO_DIAGNOSIS } from '@/lib/demo-data';
 export default function LandingPage() {
   const router = useRouter();
 
+  const handleStartDiagnosis = () => {
+    // Check if key exists in client storage before routing/diagnosing
+    const hasKey = typeof window !== 'undefined' && (
+      localStorage.getItem('gemini_api_key') ||
+      localStorage.getItem('fixit_api_key')
+    );
+
+    if (!hasKey) {
+      router.push('/onboarding');
+      return;
+    }
+
+    router.push('/auth/login');
+  };
+
   return (
     <div className="min-h-screen bg-surface">
       {/* Header */}
@@ -70,7 +85,7 @@ export default function LandingPage() {
         <div className="space-y-3">
           <Button
             size="lg"
-            onClick={() => router.push('/auth/login')}
+            onClick={handleStartDiagnosis}
           >
             Get started
           </Button>
