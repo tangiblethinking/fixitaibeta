@@ -5,9 +5,7 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => null);
 
-    // Accept image data under 'image', 'imageData', or 'base64'
     const rawImage = body?.image || body?.imageData || body?.base64;
-
     if (!rawImage) {
       return NextResponse.json(
         { error: "Image data is required for diagnosis." },
@@ -15,15 +13,17 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const apiKey =
-      process.env.GEMINI_API_KEY ||
-      process.env.NEXT_PUBLIC_GEMINI_API_KEY ||
-      "";
+    // Server-side env key strictly takes priority over client-supplied keys
+    const envApiKey =
+      process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+    const clientApiKey = req.headers.get("x-api-key") || body?.apiKey;
+
+    const apiKey = (envApiKey && envApiKey.trim() !== "" ? envApiKey : clientApiKey)?.trim();
 
     if (!apiKey) {
       return NextResponse.json(
-        { error: "Gemini API key is missing in environment variables." },
-        { status: 500 }
+        { error: "Gemini API key is missing. Please save an API key in settings or configure GEMINI_API_KEY." },
+        { status: 400 }
       );
     }
 
@@ -53,7 +53,24 @@ export async function POST(req: NextRequest) {
       "Diagnose this home repair issue from the image and provide clear, step-by-step DIY instructions to fix it.";
 
     const response = await model.generateContent([userPrompt, imagePart]);
-    const responseText = await response.response.text();
+    const candidates = response.response.candidates;
+
+    if (!candidates || candidates.length === 0) {
+      return NextResponse.json(
+        { error: "Diagnosis was blocked by safety filters or produced no response." },
+        { status: 422 }
+      );
+    }
+
+    let responseText = "";
+    try {
+      responseText = await response.response.text();
+    } catch (e: any) {
+      return NextResponse.json(
+        { error: e?.message || "Failed to extract text response from model generation." },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({ result: responseText });
   } catch (error: any) {
