@@ -5,14 +5,15 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => null);
 
-    if (!body || !body.image) {
+    // Accept image data under 'image', 'imageData', or 'base64'
+    const rawImage = body?.image || body?.imageData || body?.base64;
+
+    if (!rawImage) {
       return NextResponse.json(
         { error: "Image data is required for diagnosis." },
         { status: 400 }
       );
     }
-
-    const { image, prompt } = body;
 
     const apiKey =
       process.env.GEMINI_API_KEY ||
@@ -26,16 +27,15 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Safely extract Base64 data and MIME type
     let mimeType = "image/jpeg";
-    let base64Data = image;
+    let base64Data = rawImage;
 
-    if (image.includes(";base64,")) {
-      const parts = image.split(";base64,");
+    if (rawImage.includes(";base64,")) {
+      const parts = rawImage.split(";base64,");
       mimeType = parts[0].replace("data:", "") || "image/jpeg";
       base64Data = parts[1];
-    } else if (image.includes(",")) {
-      base64Data = image.split(",")[1];
+    } else if (rawImage.includes(",")) {
+      base64Data = rawImage.split(",")[1];
     }
 
     const genAI = new GoogleGenerativeAI(apiKey);
@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
     };
 
     const userPrompt =
-      prompt ||
+      body?.prompt ||
       "Diagnose this home repair issue from the image and provide clear, step-by-step DIY instructions to fix it.";
 
     const response = await model.generateContent([userPrompt, imagePart]);
