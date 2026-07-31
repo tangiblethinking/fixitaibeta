@@ -34,12 +34,10 @@ export default function WorkspacePage() {
         "";
 
       if (!apiKey) {
-        throw new Error("No Gemini API key found. Please configure your API key.");
+        throw new Error("Gemini API key is missing. Please configure your key in settings or .env.");
       }
 
       const genAI = new GoogleGenerativeAI(apiKey);
-      
-      // Updated model to gemini-2.5-flash to fix 404 endpoint errors
       const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
       const base64Data = image.includes(",") ? image.split(",")[1] : image;
@@ -67,46 +65,52 @@ export default function WorkspacePage() {
   };
 
   return (
-    <div className="min-h-screen p-6 max-w-4xl mx-auto space-y-6">
-      <h1 className="text-2xl font-bold">FixIt AI Workspace</h1>
+    <div className="min-h-screen bg-[#FFFDF9] p-6">
+      <header className="flex justify-between items-center max-w-5xl mx-auto mb-8">
+        <h1 className="text-xl font-bold text-gray-900">FixIt AI</h1>
+      </header>
 
-      <div className="border-2 border-dashed border-gray-300 p-6 rounded-lg text-center">
-        <input
-          type="file"
-          accept="image/*"
-          onChange={handleImageUpload}
-          className="mb-4"
-        />
-        {image && (
-          <div className="relative mt-4 max-w-md mx-auto">
-            <img
-              src={image}
-              alt="Upload preview"
-              className="rounded-lg shadow-md w-full object-cover max-h-80"
-            />
-            <button
-              onClick={handleDiagnose}
-              disabled={loading}
-              className="mt-4 w-full bg-orange-600 hover:bg-orange-700 text-white font-semibold py-3 px-6 rounded-lg shadow transition disabled:opacity-50"
-            >
-              {loading ? "Analyzing Repair Issue..." : "Diagnose this issue"}
-            </button>
+      <main className="max-w-5xl mx-auto space-y-6">
+        <div className="border-2 border-dashed border-gray-300 p-6 rounded-lg text-center bg-white">
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleImageUpload}
+            className="mb-4"
+          />
+          {image && (
+            <div className="relative mt-4 max-w-md mx-auto">
+              <div className="relative rounded-2xl overflow-hidden bg-orange-500 p-2 shadow-lg">
+                <img
+                  src={image}
+                  alt="Upload preview"
+                  className="w-full h-64 object-cover rounded-xl"
+                />
+                <button
+                  onClick={handleDiagnose}
+                  disabled={loading}
+                  className="w-full text-left pt-3 pb-1 px-3 text-white font-medium text-lg hover:opacity-90 disabled:opacity-50"
+                >
+                  {loading ? "Diagnosing..." : "Diagnose this issue"}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {error && (
+          <div className="p-4 bg-white rounded-lg text-red-600 text-sm font-sans shadow-sm border border-gray-100">
+            {error}
           </div>
         )}
-      </div>
 
-      {error && (
-        <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm font-mono whitespace-pre-wrap">
-          {error}
-        </div>
-      )}
-
-      {result && (
-        <div className="p-6 bg-white border border-gray-200 rounded-lg shadow-sm space-y-4">
-          <h2 className="text-xl font-semibold">Diagnosis Result</h2>
-          <div className="prose max-w-none whitespace-pre-line">{result}</div>
-        </div>
-      )}
+        {result && (
+          <div className="p-6 bg-white rounded-2xl shadow-sm border border-gray-100 text-gray-800 space-y-4">
+            <h2 className="text-xl font-semibold">Diagnosis Result</h2>
+            <div className="prose max-w-none whitespace-pre-line">{result}</div>
+          </div>
+        )}
+      </main>
     </div>
   );
 }
