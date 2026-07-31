@@ -1,59 +1,60 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { NextRequest, NextResponse } from "next/server";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 export async function POST(req: NextRequest) {
   try {
-    const headerKey = req.headers.get('x-api-key');
-    const formData = await req.formData();
-    const bodyKey = formData.get('apiKey') as string | null;
-    
-    const activeApiKey = process.env.GEMINI_API_KEY || headerKey || bodyKey;
+    const { image, prompt } = await req.json();
 
-    if (!activeApiKey) {
+    if (!image) {
       return NextResponse.json(
-        { error: 'No API key found. Please set up your key in Settings.' },
+        { error: "Image data is required for diagnosis." },
         { status: 400 }
       );
     }
 
-    const imageFile = formData.get('image') as File | null;
-    const message = (formData.get('message') as string) || 'Diagnose this home repair issue.';
-
-    if (!imageFile) {
+    const apiKey = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY || "";
+    if (!apiKey) {
       return NextResponse.json(
-        { error: 'No image provided for diagnosis.' },
-        { status: 400 }
+        { error: "Gemini API key is not configured in server environment variables." },
+        { status: 500 }
       );
     }
 
-    const genAI = new GoogleGenerativeAI(activeApiKey);
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    // Extract dynamic MIME type (e.g., image/png, image/jpeg, image/webp)
+    let mimeType = "image/jpeg";
+    let base64Data = image;
 
-    const arrayBuffer = await imageFile.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-    const base64Image = buffer.toString('base64');
+    if (image.includes(";base64,")) {
+      const parts = image.split(";base64,");
+      mimeType = parts[0].replace("data:", "") || "image/jpeg";
+      base64Data = parts[1];
+    } else if (image.includes(",")) {
+      base64Data = image.split(",")[1];
+    }
 
-    const result = await model.generateContent([
-      message,
-      {
-        inlineData: {
-          data: base64Image,
-          mimeType: imageFile.type || 'image/jpeg',
-        },
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+
+    const imagePart = {
+      inlineData: {
+        data: base64Data,
+        mimeType: mimeType,
       },
-    ]);
+    };
 
-    const responseText = result.response.text();
+    const userPrompt =
+      prompt ||
+      "Diagnose this home repair issue from the image and provide clear, step-by-step DIY instructions to fix it.";
 
-    return NextResponse.json({
-      diagnosis: {
-        title: 'Home Repair Diagnosis',
-        summary: responseText,
-        timestamp: new Date().toISOString(),
-      },
-    });
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Failed to process diagnosis.';
-    return NextResponse.json({ error: message }, { status: 500 });
+    const response = await model.generateContent([userPrompt, imagePart]);
+    const responseText = await response.response.text();
+
+    return NextResponse.json({ result: responseText });
+  } catch (error: any) {
+    console.error("Diagnosis API Error:", error);
+    return NextResponse.json(
+      { error: error.message || "Failed to analyze image." },
+      { status: 500 }
+    );
   }
 }
