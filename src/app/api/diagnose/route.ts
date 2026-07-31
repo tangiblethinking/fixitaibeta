@@ -3,24 +3,30 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 
 export async function POST(req: NextRequest) {
   try {
-    const { image, prompt } = await req.json();
+    const body = await req.json().catch(() => null);
 
-    if (!image) {
+    if (!body || !body.image) {
       return NextResponse.json(
         { error: "Image data is required for diagnosis." },
         { status: 400 }
       );
     }
 
-    const apiKey = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY || "";
+    const { image, prompt } = body;
+
+    const apiKey =
+      process.env.GEMINI_API_KEY ||
+      process.env.NEXT_PUBLIC_GEMINI_API_KEY ||
+      "";
+
     if (!apiKey) {
       return NextResponse.json(
-        { error: "Gemini API key is not configured in server environment variables." },
+        { error: "Gemini API key is missing in environment variables." },
         { status: 500 }
       );
     }
 
-    // Extract dynamic MIME type (e.g., image/png, image/jpeg, image/webp)
+    // Safely extract Base64 data and MIME type
     let mimeType = "image/jpeg";
     let base64Data = image;
 
@@ -53,7 +59,7 @@ export async function POST(req: NextRequest) {
   } catch (error: any) {
     console.error("Diagnosis API Error:", error);
     return NextResponse.json(
-      { error: error.message || "Failed to analyze image." },
+      { error: error?.message || "Failed to analyze repair image." },
       { status: 500 }
     );
   }
